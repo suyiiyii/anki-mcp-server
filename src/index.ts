@@ -95,7 +95,11 @@ server.setRequestHandler(ReadResourceRequestSchema, async (resource) => {
     // TODO: return something real
     return {
       contents: [
-        { uri, mimeType: "application/json", text: JSON.stringify({ deckId }) },
+        {
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify({ deckId }),
+        },
       ],
     };
   } else if (uri.startsWith("anki://models/")) {
