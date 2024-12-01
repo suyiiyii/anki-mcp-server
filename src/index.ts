@@ -64,14 +64,20 @@ type DeckNamesToIds = Record<string, number>;
  */
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   const decks = await ankiRequest<DeckNamesToIds>("deckNamesAndIds");
+  const models = await ankiRequest<DeckNamesToIds>("modelNamesAndIds");
 
   const deckResources = Object.entries(decks).map(([name, id]) => ({
     uri: `anki://decks/${id}`,
     name,
   }));
 
+  const modelResources = Object.entries(models).map(([name, id]) => ({
+    uri: `anki://models/${id}`,
+    name,
+  }));
+
   return {
-    resources: deckResources,
+    resources: deckResources.concat(modelResources),
   };
 });
 
@@ -82,22 +88,6 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
-      {
-        name: "list_decks",
-        description: "List the decks available in the collection",
-        inputSchema: {
-          type: "object",
-          properties: {},
-        },
-      },
-      {
-        name: "list_models",
-        description: "List the note model types available in the collection",
-        inputSchema: {
-          type: "object",
-          properties: {},
-        },
-      },
       {
         name: "create_note",
         description: "Create a note in a deck",
