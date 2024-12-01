@@ -57,6 +57,7 @@ async function ankiRequest<T>(action: string, params: any = {}): Promise<T> {
 }
 
 type DeckNamesToIds = Record<string, number>;
+type ModelNamesToIds = Record<string, number>;
 
 /**
  * Handler that lists available tools.
@@ -64,7 +65,7 @@ type DeckNamesToIds = Record<string, number>;
  */
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   const decks = await ankiRequest<DeckNamesToIds>("deckNamesAndIds");
-  const models = await ankiRequest<DeckNamesToIds>("modelNamesAndIds");
+  const models = await ankiRequest<ModelNamesToIds>("modelNamesAndIds");
 
   const deckResources = Object.entries(decks).map(([name, id]) => ({
     uri: `anki://decks/${id}`,
