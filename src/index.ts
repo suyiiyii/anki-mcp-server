@@ -16,6 +16,7 @@ import {
   ListResourcesRequestSchema,
   ListResourcesResultSchema,
   ListToolsRequestSchema,
+  ReadResourceRequestSchema,
   ResourceSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
@@ -82,6 +83,38 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
   };
 });
 
+/**
+ * Handler that lists available tools.
+ * Exposes a single "create_note" tool that lets clients create new notes.
+ */
+server.setRequestHandler(ReadResourceRequestSchema, async (resource) => {
+  const uri = resource.params.uri;
+
+  if (uri.startsWith("anki://decks/")) {
+    const deckId = parseInt(uri.replace("anki://decks/", ""));
+    // TODO: return something real
+    return {
+      contents: [
+        { uri, mimeType: "application/json", text: JSON.stringify({ deckId }) },
+      ],
+    };
+  } else if (uri.startsWith("anki://models/")) {
+    const modelId = parseInt(uri.replace("anki://models/", ""));
+    const models = await ankiRequest<object>("findModelsById", {
+      modelIds: [modelId],
+    });
+    return {
+      contents: [
+        {
+          uri,
+          mimeType: "application/json",
+          text: JSON.stringify(models),
+        },
+      ],
+    };
+  }
+  throw new Error("resource not found");
+});
 /**
  * Handler that lists available tools.
  * Exposes a single "create_note" tool that lets clients create new notes.
