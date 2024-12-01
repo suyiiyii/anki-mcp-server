@@ -13,7 +13,10 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ListResourcesResultSchema,
   ListToolsRequestSchema,
+  ResourceSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 /**
@@ -27,10 +30,50 @@ const server = new Server(
   },
   {
     capabilities: {
+      resources: {},
       tools: {},
     },
   },
 );
+
+type AnkiRequestResult<T> = {
+  result: T;
+  error: string;
+};
+/**
+ * Make a request to the AnkiConnect API
+ */
+async function ankiRequest<T>(action: string, params: any = {}): Promise<T> {
+  const response = await fetch("http://localhost:8765", {
+    method: "POST",
+    body: JSON.stringify({
+      action,
+      version: 6,
+      params,
+    }),
+  });
+  const { result } = (await response.json()) as AnkiRequestResult<T>;
+  return result;
+}
+
+type DeckNamesToIds = Record<string, number>;
+
+/**
+ * Handler that lists available tools.
+ * Exposes a single "create_note" tool that lets clients create new notes.
+ */
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  const decks = await ankiRequest<DeckNamesToIds>("deckNamesAndIds");
+
+  const deckResources = Object.entries(decks).map(([name, id]) => ({
+    uri: `anki://decks/${id}`,
+    name,
+  }));
+
+  return {
+    resources: deckResources,
+  };
+});
 
 /**
  * Handler that lists available tools.
@@ -89,63 +132,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 /**
- * Make a request to the AnkiConnect API
- */
-async function ankiRequest(action: string, params: any = {}) {
-  const response = await fetch("http://localhost:8765", {
-    method: "POST",
-    body: JSON.stringify({
-      action,
-      version: 6,
-      params,
-    }),
-  });
-  return response.json();
-}
-
-/**
  * Handler for the create_note tool.
  * Creates a new note with the provided title and content, and returns success message.
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
-    case "list_decks": {
-      const data = await ankiRequest("deckNames");
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Decks: ${data.result.join(", ")}`,
-          },
-        ],
-      };
-    }
-    case "list_model_names": {
-      const data = await ankiRequest("modelNames");
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Decks: ${data.result.join(", ")}`,
-          },
-        ],
-      };
-    }
-    case "get_model": {
-      const data = await ankiRequest("modelNames");
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Decks: ${data.result.join(", ")}`,
-          },
-        ],
-      };
-    }
-
     default:
       throw new Error("Unknown tool");
   }
