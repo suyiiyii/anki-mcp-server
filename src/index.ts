@@ -14,10 +14,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
-  ListResourcesResultSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
-  ResourceSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 /**
@@ -119,6 +117,32 @@ server.setRequestHandler(ReadResourceRequestSchema, async (resource) => {
   }
   throw new Error("resource not found");
 });
+
+const noteParameters = {
+  type: "object",
+  properties: {
+    deckName: {
+      type: "string",
+      description: "Name of the deck to add note to",
+    },
+    modelName: {
+      type: "string",
+      description: "Name of the note model/type to use",
+    },
+    fields: {
+      type: "object",
+      description: "Map of fields to the value in the note model being used",
+    },
+    tags: {
+      type: "array",
+      items: {
+        type: "string",
+      },
+      description: "Tags to apply to the note",
+    },
+  },
+  required: ["deckName", "modelName", "fields"],
+};
 /**
  * Handler that lists available tools.
  * Exposes a single "create_note" tool that lets clients create new notes.
@@ -127,32 +151,46 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: "create_note",
-        description: "Create a note in a deck",
+        name: "listDecks",
+        description: "Get the names of all decks from Anki",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
+        name: "listModels",
+        description: "Get the names of all note models from Anki",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
+        name: "getModel",
+        description:
+          "Get a model, including field and template definitions, from Anki",
         inputSchema: {
           type: "object",
           properties: {
-            deckName: {
-              type: "string",
-              description: "Name of the deck to add note to",
-            },
             modelName: {
               type: "string",
-              description: "Name of the note model/type to use",
-            },
-            fields: {
-              type: "object",
-              description: "Field values for the note model being used",
-            },
-            tags: {
-              type: "array",
-              items: {
-                type: "string",
-              },
-              description: "Tags to apply to the note",
+              description: "Name of the model to get",
             },
           },
-          required: ["deckName", "modelName", "fields"],
+        },
+      },
+      {
+        name: "addNote",
+        description: "Create a single note",
+        inputSchema: noteParameters,
+      },
+      {
+        name: "addNotes",
+        description: "Create many notes in a deck",
+        inputSchema: {
+          type: "object",
+          properties: {
+            notes: {
+              type: "array",
+              description: "Notes to create",
+              items: noteParameters,
+            },
+          },
         },
       },
     ],
@@ -165,6 +203,49 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
+    case "listDecks":
+      const decks = await ankiRequest<string[]>("deckNames");
+
+      return {
+        toolResult: `Here is a list of the decks in the user's Anki collection: ${decks.join(", ")}`,
+      };
+    case "listModels":
+      const models = await ankiRequest<string[]>("modelNames");
+
+      return {
+        toolResult: `Here is the list of note models in the user's Anki collection: ${models}`,
+      };
+    case "getModel":
+      if (!request.params.arguments) {
+        throw new Error("getModel requires a model name");
+      }
+
+      const modelNames = [request.params.arguments.modelName];
+
+      const model = await ankiRequest<string[]>("findModelsByName", {
+        modelNames,
+      });
+
+      return {
+        toolResult: `Here is the ${request.params.arguments.modelName} in the user's Anki collection: ${JSON.stringify(model)}`,
+      };
+    case "addNotes":
+      const createdNoteIds = await ankiRequest<number[]>(
+        "addNotes",
+        request.params.arguments,
+      );
+      return {
+        toolResult: `Created notes with the following IDs: ${createdNoteIds.join(", ")}`,
+      };
+    case "addNote":
+      const createdNoteId = await ankiRequest<number>(
+        "addNote",
+        request.params.arguments,
+      );
+      return {
+        toolResult: `Created note with the following ID: ${createdNoteId}`,
+      };
+
     default:
       throw new Error("Unknown tool");
   }
