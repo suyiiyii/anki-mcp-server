@@ -232,7 +232,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     case "addNote":
       const createdNoteId = await ankiRequest<number>(
         "addNote",
-        request.params.arguments,
+        { note: request.params.arguments },
       );
       return {
         toolResult: `Created note with the following ID: ${createdNoteId}`,
