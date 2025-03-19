@@ -52,7 +52,8 @@ On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 {
   "mcpServers": {
     "anki-mcp": {
-      "command": "/path/to/anki-mcp/build/index.js"
+      "command": "node",
+      "args": ["d:\\anki-mcp-server\\build\\index.js"]
     }
   }
 }
