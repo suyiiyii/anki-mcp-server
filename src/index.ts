@@ -199,12 +199,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const decks = await ankiRequest<string[]>("deckNames");
 
       return {
+        content: decks,
         toolResult: `Here is a list of the decks in the user's Anki collection: ${decks.join(", ")}`,
       };
     case "listModels":
       const models = await ankiRequest<string[]>("modelNames");
 
       return {
+        content: models,
         toolResult: `Here is the list of note models in the user's Anki collection: ${models}`,
       };
     case "getModel":
@@ -219,6 +221,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       });
 
       return {
+        content: model,
         toolResult: `Here is the ${request.params.arguments.modelName} in the user's Anki collection: ${JSON.stringify(model)}`,
       };
     case "addNotes":
@@ -227,6 +230,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         request.params.arguments,
       );
       return {
+        content: createdNoteIds,
         toolResult: `Created notes with the following IDs: ${createdNoteIds.join(", ")}`,
       };
     case "addNote":
@@ -235,6 +239,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         { note: request.params.arguments },
       );
       return {
+        content: createdNoteId,
         toolResult: `Created note with the following ID: ${createdNoteId}`,
       };
 
