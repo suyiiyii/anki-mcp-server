@@ -199,15 +199,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const decks = await ankiRequest<string[]>("deckNames");
 
       return {
-        content: decks,
-        toolResult: `Here is a list of the decks in the user's Anki collection: ${decks.join(", ")}`,
+        content: [{ type: "text", text: decks.join(", ") }],
+        toolResult: `success`,
       };
     case "listModels":
       const models = await ankiRequest<string[]>("modelNames");
 
       return {
-        content: models,
-        toolResult: `Here is the list of note models in the user's Anki collection: ${models}`,
+        content: [{ type: "text", text: models.join(", ") }],
+        toolResult: `success, and you can use getModel to get more details on a specific model`,
       };
     case "getModel":
       if (!request.params.arguments) {
@@ -221,8 +221,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       });
 
       return {
-        content: model,
-        toolResult: `Here is the ${request.params.arguments.modelName} in the user's Anki collection: ${JSON.stringify(model)}`,
+        content: [{ type: "text", text: JSON.stringify(model, null, 2) }],
+        toolResult: `success, and you can use addNote or addNotes to create notes with this model`,
       };
     case "addNotes":
       const createdNoteIds = await ankiRequest<number[]>(
@@ -230,8 +230,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         request.params.arguments,
       );
       return {
-        content: createdNoteIds,
-        toolResult: `Created notes with the following IDs: ${createdNoteIds.join(", ")}`,
+        content: [{ type: "text", text: `Created note IDs: ${createdNoteIds.join(", ")}` }],
+        toolResult: `success, created ${createdNoteIds.length} notes`,
       };
     case "addNote":
       const createdNoteId = await ankiRequest<number>(
@@ -239,8 +239,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         { note: request.params.arguments },
       );
       return {
-        content: createdNoteId,
-        toolResult: `Created note with the following ID: ${createdNoteId}`,
+        content: [{ type: "text", text: `Created note ID: ${createdNoteId}` }],
+        toolResult: `success, created note with ID: ${createdNoteId}`,
       };
 
     default:
