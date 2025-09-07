@@ -23,7 +23,7 @@ const server = new Server(
       resources: {},
       tools: {},
     },
-  },
+  }
 );
 
 type AnkiRequestResult<T> = {
@@ -42,7 +42,10 @@ async function ankiRequest<T>(action: string, params: any = {}): Promise<T> {
       params,
     }),
   });
-  const { result } = (await response.json()) as AnkiRequestResult<T>;
+  const { result, error } = (await response.json()) as AnkiRequestResult<T>;
+  if (error) {
+    throw new Error(`Anki API error: ${error}`);
+  }
   return result;
 }
 
@@ -225,23 +228,47 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         toolResult: `success, and you can use addNote or addNotes to create notes with this model`,
       };
     case "addNotes":
-      const createdNoteIds = await ankiRequest<number[]>(
-        "addNotes",
-        request.params.arguments,
-      );
-      return {
-        content: [{ type: "text", text: `Created note IDs: ${createdNoteIds.join(", ")}` }],
-        toolResult: `success, created ${createdNoteIds.length} notes`,
-      };
+      try {
+        const createdNoteIds = await ankiRequest<number[]>(
+          "addNotes",
+          request.params.arguments
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Created note IDs: ${createdNoteIds.join(", ")}`,
+            },
+          ],
+          toolResult: `success, created ${createdNoteIds.length} notes`,
+        };
+      } catch (error) {
+        return {
+          content: [{ type: "text", text: `null` }],
+          toolResult: `error, failed to create notes. msg: ${
+            (error as Error).message
+          }, please check that the deck and model names are correct and that all required fields are provided.`,
+        };
+      }
     case "addNote":
-      const createdNoteId = await ankiRequest<number>(
-        "addNote",
-        { note: request.params.arguments },
-      );
-      return {
-        content: [{ type: "text", text: `Created note ID: ${createdNoteId}` }],
-        toolResult: `success, created note with ID: ${createdNoteId}`,
-      };
+      try {
+        const createdNoteId = await ankiRequest<number>("addNote", {
+          note: request.params.arguments,
+        });
+        return {
+          content: [
+            { type: "text", text: `Created note ID: ${createdNoteId}` },
+          ],
+          toolResult: `success, created note with ID: ${createdNoteId}`,
+        };
+      } catch (error) {
+        return {
+          content: [{ type: "text", text: `null` }],
+          toolResult: `error, failed to create note. msg: ${
+            (error as Error).message
+          }, please check that the deck and model names are correct and that all required fields are provided.`,
+        };
+      }
 
     default:
       throw new Error("Unknown tool");
